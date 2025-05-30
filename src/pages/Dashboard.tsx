@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { BotControls } from "@/components/dashboard/BotControls";
 import { BotStats } from "@/components/dashboard/BotStats";
@@ -17,6 +16,7 @@ export interface Bot {
   mass: number;
   uptime: number;
   position: { x: number; y: number };
+  server: string;
 }
 
 export interface DashboardStats {
@@ -76,13 +76,15 @@ const Dashboard = () => {
   const handleStartBots = async () => {
     setIsStarting(true);
     
-    // Create new bots
+    // Create new bots with random server assignments
+    const servers = ['US-East-1', 'US-West-2', 'EU-Central-1', 'Asia-Pacific-1', 'US-Central-3'];
     const newBots: Bot[] = Array.from({ length: selectedBotCount }, (_, i) => ({
       id: `bot-${Date.now()}-${i}`,
       status: 'starting' as const,
       mass: 0,
       uptime: 0,
-      position: { x: Math.random() * 1000, y: Math.random() * 1000 }
+      position: { x: Math.random() * 1000, y: Math.random() * 1000 },
+      server: servers[Math.floor(Math.random() * servers.length)]
     }));
 
     setBots(newBots);

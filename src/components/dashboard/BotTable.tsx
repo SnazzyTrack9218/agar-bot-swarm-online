@@ -2,6 +2,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Bot } from "@/pages/Dashboard";
+import { Server } from "lucide-react";
 
 interface BotTableProps {
   bots: Bot[];
@@ -37,6 +38,7 @@ export const BotTable = ({ bots }: BotTableProps) => {
             <TableRow className="border-white/10">
               <TableHead className="text-gray-300">Bot ID</TableHead>
               <TableHead className="text-gray-300">Status</TableHead>
+              <TableHead className="text-gray-300">Server</TableHead>
               <TableHead className="text-gray-300">Mass</TableHead>
               <TableHead className="text-gray-300">Uptime</TableHead>
               <TableHead className="text-gray-300">Position</TableHead>
@@ -45,7 +47,7 @@ export const BotTable = ({ bots }: BotTableProps) => {
           <TableBody>
             {bots.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={6} className="text-center text-gray-400 py-8">
                   No bots deployed
                 </TableCell>
               </TableRow>
@@ -59,6 +61,14 @@ export const BotTable = ({ bots }: BotTableProps) => {
                     <Badge className={getStatusColor(bot.status)}>
                       {bot.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-1">
+                      <Server className="w-3 h-3 text-green-400" />
+                      <span className="text-green-400 font-semibold text-sm">
+                        {bot.server}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-blue-400 font-semibold">
                     {bot.mass.toFixed(1)}
