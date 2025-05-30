@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { BotControls } from "@/components/dashboard/BotControls";
 import { BotStats } from "@/components/dashboard/BotStats";
@@ -6,6 +7,7 @@ import { BotTable } from "@/components/dashboard/BotTable";
 import { ProxySettings } from "@/components/dashboard/ProxySettings";
 import { IntelligenceSettings } from "@/components/dashboard/IntelligenceSettings";
 import { ExportLogs } from "@/components/dashboard/ExportLogs";
+import { LiveViewer } from "@/components/dashboard/LiveViewer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -144,6 +146,11 @@ const Dashboard = () => {
           <div className="lg:col-span-2">
             <BotStats stats={stats} />
           </div>
+        </div>
+
+        {/* Live Viewer Section */}
+        <div className="mb-8">
+          <LiveViewer bots={bots} />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
