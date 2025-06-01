@@ -19,7 +19,14 @@ export const LiveViewer = ({ bots }: LiveViewerProps) => {
 
   const activeBots = bots.filter(bot => bot.status === 'active');
 
-  // Simulate game stream - in real implementation this would connect to WebSocket
+  // Auto-select first bot when bots become available
+  useEffect(() => {
+    if (activeBots.length > 0 && !selectedBotId) {
+      setSelectedBotId(activeBots[0].id);
+    }
+  }, [activeBots, selectedBotId]);
+
+  // Simulate game stream with real bot positions
   useEffect(() => {
     if (!isStreaming || !canvasRef.current || !selectedBotId) return;
 
@@ -38,24 +45,25 @@ export const LiveViewer = ({ bots }: LiveViewerProps) => {
       // Draw grid
       ctx.strokeStyle = '#1a1a1a';
       ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 20) {
+      const gridSize = 20 * zoom;
+      for (let x = 0; x < canvas.width; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, canvas.height);
         ctx.stroke();
       }
-      for (let y = 0; y < canvas.height; y += 20) {
+      for (let y = 0; y < canvas.height; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
         ctx.stroke();
       }
 
-      // Draw pellets (food)
+      // Draw pellets (food) - moving based on time
       ctx.fillStyle = '#00ff00';
-      for (let i = 0; i < 50; i++) {
-        const x = (Math.sin(Date.now() * 0.001 + i) * 100 + canvas.width / 2) * zoom;
-        const y = (Math.cos(Date.now() * 0.001 + i) * 100 + canvas.height / 2) * zoom;
+      for (let i = 0; i < 100; i++) {
+        const x = (Math.sin(Date.now() * 0.002 + i) * 200 + selectedBot.position.x * zoom) % canvas.width;
+        const y = (Math.cos(Date.now() * 0.002 + i * 1.5) * 200 + selectedBot.position.y * zoom) % canvas.height;
         if (x > 0 && x < canvas.width && y > 0 && y < canvas.height) {
           ctx.beginPath();
           ctx.arc(x, y, 3, 0, Math.PI * 2);
@@ -63,79 +71,101 @@ export const LiveViewer = ({ bots }: LiveViewerProps) => {
         }
       }
 
-      // Draw viruses
+      // Draw viruses - fewer and more dangerous looking
       ctx.fillStyle = '#ff0000';
-      for (let i = 0; i < 5; i++) {
-        const x = (Math.sin(Date.now() * 0.0005 + i * 2) * 150 + canvas.width / 2) * zoom;
-        const y = (Math.cos(Date.now() * 0.0005 + i * 2) * 150 + canvas.height / 2) * zoom;
+      for (let i = 0; i < 8; i++) {
+        const x = (Math.sin(Date.now() * 0.001 + i * 3) * 300 + selectedBot.position.x * zoom * 0.5) % canvas.width;
+        const y = (Math.cos(Date.now() * 0.001 + i * 3) * 300 + selectedBot.position.y * zoom * 0.5) % canvas.height;
         if (x > 0 && x < canvas.width && y > 0 && y < canvas.height) {
           ctx.beginPath();
-          ctx.arc(x, y, 15, 0, Math.PI * 2);
+          ctx.arc(x, y, 25, 0, Math.PI * 2);
           ctx.fill();
           // Draw spikes
-          for (let spike = 0; spike < 8; spike++) {
-            const angle = (spike / 8) * Math.PI * 2;
+          ctx.strokeStyle = '#ff0000';
+          ctx.lineWidth = 3;
+          for (let spike = 0; spike < 12; spike++) {
+            const angle = (spike / 12) * Math.PI * 2 + Date.now() * 0.001;
             ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + Math.cos(angle) * 20, y + Math.sin(angle) * 20);
+            ctx.moveTo(x + Math.cos(angle) * 25, y + Math.sin(angle) * 25);
+            ctx.lineTo(x + Math.cos(angle) * 35, y + Math.sin(angle) * 35);
             ctx.stroke();
           }
         }
       }
 
-      // Draw bot (camera bot)
-      const botX = selectedBot.position.x * zoom * 0.5;
-      const botY = selectedBot.position.y * zoom * 0.5;
+      // Draw selected bot (camera bot) at center
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
       
       ctx.fillStyle = '#00aaff';
       ctx.beginPath();
-      ctx.arc(canvas.width / 2, canvas.height / 2, selectedBot.mass * 0.5, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, selectedBot.mass * 0.8, 0, Math.PI * 2);
       ctx.fill();
       
       // Draw bot outline
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Draw other bots
+      // Draw bot name
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(selectedBot.id.substring(0, 8), centerX, centerY - selectedBot.mass * 0.8 - 10);
+
+      // Draw other bots relative to selected bot
       activeBots.forEach(bot => {
         if (bot.id === selectedBotId) return;
         
-        const relativeX = (bot.position.x - selectedBot.position.x) * zoom * 0.5 + canvas.width / 2;
-        const relativeY = (bot.position.y - selectedBot.position.y) * zoom * 0.5 + canvas.height / 2;
+        const relativeX = (bot.position.x - selectedBot.position.x) * zoom * 0.3 + centerX;
+        const relativeY = (bot.position.y - selectedBot.position.y) * zoom * 0.3 + centerY;
         
-        if (relativeX > -50 && relativeX < canvas.width + 50 && 
-            relativeY > -50 && relativeY < canvas.height + 50) {
+        if (relativeX > -100 && relativeX < canvas.width + 100 && 
+            relativeY > -100 && relativeY < canvas.height + 100) {
           ctx.fillStyle = '#ffaa00';
           ctx.beginPath();
-          ctx.arc(relativeX, relativeY, bot.mass * 0.3, 0, Math.PI * 2);
+          ctx.arc(relativeX, relativeY, bot.mass * 0.5, 0, Math.PI * 2);
           ctx.fill();
+          
+          // Draw bot outline
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
           
           // Draw bot name
           ctx.fillStyle = '#ffffff';
           ctx.font = '12px monospace';
-          ctx.fillText(bot.id.substring(0, 8), relativeX - 20, relativeY - bot.mass * 0.3 - 5);
+          ctx.textAlign = 'center';
+          ctx.fillText(bot.id.substring(0, 6), relativeX, relativeY - bot.mass * 0.5 - 8);
         }
       });
 
       // Draw movement trails if enabled
       if (showPaths) {
         ctx.strokeStyle = '#00aaff50';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, 30, 0, Math.PI * 2);
-        ctx.stroke();
+        // Draw a trail effect around the bot
+        for (let i = 0; i < 5; i++) {
+          const trailX = centerX - selectedBot.velocity.x * i * 10;
+          const trailY = centerY - selectedBot.velocity.y * i * 10;
+          ctx.beginPath();
+          ctx.arc(trailX, trailY, 5 - i, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       // Draw HUD
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(10, 10, 200, 80);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(10, 10, 220, 100);
       
       ctx.fillStyle = '#ffffff';
       ctx.font = '14px monospace';
-      ctx.fillText(`Bot: ${selectedBot.id.substring(0, 8)}`, 20, 30);
+      ctx.textAlign = 'left';
+      ctx.fillText(`Bot: ${selectedBot.id.substring(0, 10)}`, 20, 30);
       ctx.fillText(`Mass: ${selectedBot.mass.toFixed(1)}`, 20, 50);
       ctx.fillText(`Server: ${selectedBot.server}`, 20, 70);
+      ctx.fillText(`Position: (${selectedBot.position.x.toFixed(0)}, ${selectedBot.position.y.toFixed(0)})`, 20, 90);
     };
 
     const interval = setInterval(drawGameFrame, 100); // 10 FPS
@@ -143,7 +173,11 @@ export const LiveViewer = ({ bots }: LiveViewerProps) => {
   }, [isStreaming, selectedBotId, bots, zoom, showPaths, activeBots]);
 
   const handleStartStream = () => {
-    if (activeBots.length === 0) return;
+    console.log('Starting stream for bot:', selectedBotId);
+    if (activeBots.length === 0) {
+      console.log('No active bots to stream');
+      return;
+    }
     if (!selectedBotId && activeBots.length > 0) {
       setSelectedBotId(activeBots[0].id);
     }
@@ -151,6 +185,7 @@ export const LiveViewer = ({ bots }: LiveViewerProps) => {
   };
 
   const handleStopStream = () => {
+    console.log('Stopping stream');
     setIsStreaming(false);
   };
 

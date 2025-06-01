@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { BotControls } from "@/components/dashboard/BotControls";
 import { BotStats } from "@/components/dashboard/BotStats";
@@ -19,6 +18,7 @@ export interface Bot {
   uptime: number;
   position: { x: number; y: number };
   server: string;
+  velocity: { x: number; y: number };
 }
 
 export interface DashboardStats {
@@ -41,22 +41,47 @@ const Dashboard = () => {
   const [proxy, setProxy] = useState('');
   const [isStarting, setIsStarting] = useState(false);
 
-  // Simulate real-time updates
+  // Simulate real-time movement and updates
   useEffect(() => {
     const interval = setInterval(() => {
-      if (bots.length > 0) {
-        setBots(prevBots => 
-          prevBots.map(bot => ({
+      setBots(prevBots => 
+        prevBots.map(bot => {
+          if (bot.status !== 'active') return bot;
+          
+          // Simulate movement with random velocity changes
+          const newVelocity = {
+            x: bot.velocity.x + (Math.random() - 0.5) * 2,
+            y: bot.velocity.y + (Math.random() - 0.5) * 2
+          };
+          
+          // Limit velocity
+          const maxVelocity = 5;
+          newVelocity.x = Math.max(-maxVelocity, Math.min(maxVelocity, newVelocity.x));
+          newVelocity.y = Math.max(-maxVelocity, Math.min(maxVelocity, newVelocity.y));
+          
+          // Update position
+          const newPosition = {
+            x: bot.position.x + newVelocity.x,
+            y: bot.position.y + newVelocity.y
+          };
+          
+          // Keep bots within bounds
+          newPosition.x = Math.max(0, Math.min(1000, newPosition.x));
+          newPosition.y = Math.max(0, Math.min(1000, newPosition.y));
+          
+          return {
             ...bot,
-            mass: bot.status === 'active' ? bot.mass + Math.random() * 10 : bot.mass,
-            uptime: bot.status === 'active' ? bot.uptime + 1 : bot.uptime
-          }))
-        );
-      }
+            mass: bot.mass + Math.random() * 2, // Simulate mass gain
+            uptime: bot.uptime + 1,
+            position: newPosition,
+            velocity: newVelocity
+          };
+        })
+      );
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [bots]);
+  }, []);
 
   // Update stats when bots change
   useEffect(() => {
@@ -76,6 +101,7 @@ const Dashboard = () => {
   }, [bots]);
 
   const handleStartBots = async () => {
+    console.log('Starting bots...', selectedBotCount);
     setIsStarting(true);
     
     // Create new bots with random server assignments
@@ -83,26 +109,41 @@ const Dashboard = () => {
     const newBots: Bot[] = Array.from({ length: selectedBotCount }, (_, i) => ({
       id: `bot-${Date.now()}-${i}`,
       status: 'starting' as const,
-      mass: 0,
+      mass: 10,
       uptime: 0,
-      position: { x: Math.random() * 1000, y: Math.random() * 1000 },
-      server: servers[Math.floor(Math.random() * servers.length)]
+      position: { 
+        x: Math.random() * 1000, 
+        y: Math.random() * 1000 
+      },
+      server: servers[Math.floor(Math.random() * servers.length)],
+      velocity: { 
+        x: (Math.random() - 0.5) * 4, 
+        y: (Math.random() - 0.5) * 4 
+      }
     }));
 
     setBots(newBots);
+    console.log('Created bots:', newBots);
 
     // Simulate startup delay
     setTimeout(() => {
-      setBots(prev => prev.map(bot => ({ ...bot, status: 'active' as const, mass: 10 })));
+      setBots(prev => prev.map(bot => ({ 
+        ...bot, 
+        status: 'active' as const, 
+        mass: 15 + Math.random() * 10 
+      })));
       setIsStarting(false);
+      console.log('Bots are now active');
     }, 2000);
   };
 
   const handleStopBots = () => {
+    console.log('Stopping bots');
     setBots(prev => prev.map(bot => ({ ...bot, status: 'stopped' as const })));
   };
 
   const handleStopAllBots = () => {
+    console.log('Emergency stop - removing all bots');
     setBots([]);
   };
 
